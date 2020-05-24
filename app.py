@@ -1,0 +1,143 @@
+# Importing Streamlit Library
+import streamlit as st
+
+# EDA pkgs
+import pandas as pd
+import numpy as np
+
+# Data viz pkgs
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+import seaborn as sns
+
+# ML pkgs
+from sklearn import model_selection
+from sklearn .linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+
+
+def main():
+    """Semi Auto ML App with Streamlit"""
+    st.title("Automated ML Web App")
+    st.text("Using Streamlit V 0.60")
+    activities = ["EDA", "Plot", 'Model Building', 'About']
+    choice = st.sidebar.selectbox('Select Activity', activities)
+
+    if choice == 'EDA':
+        st.subheader('Exploratory Data Analysis')
+        data = st.file_uploader('Upload Dataset(csv/txt)', type=['csv', 'txt'])
+        if data is not None:
+            df = pd.read_csv(data)
+            st.dataframe(df.head())
+            if st.checkbox('Show shape'):
+                st.write(df.shape)
+            if st.checkbox('Show Columns'):
+                all_columns = df.columns.to_list()
+                st.write(all_columns)
+            if st.checkbox('Select Columns to show'):
+                selected_columns = st.multiselect('Select Columns',all_columns)
+                new_df = df[selected_columns]
+                st.dataframe(new_df)
+            if st.checkbox('Show Summary'):
+                st.write(df.describe())
+            if st.checkbox('Show Value Counts'):
+                st.write(df.iloc[:,-1].value_counts())
+    elif choice == 'Plot':
+        st.subheader('Data Visualisation')
+        data = st.file_uploader('Upload Dataset(csv/txt)', type=['csv', 'txt'])
+        if data is not None:
+            df = pd.read_csv(data)
+            st.dataframe(df.head())
+            if st.checkbox("Correlation with Seaborn"):
+                st.write(sns.heatmap(df.corr()))
+                st.pyplot()
+            if st.checkbox("Pie chart"):
+                all_columns = df.columns.to_list()
+                columns_to_plot = st.selectbox('Select 1 Column', all_columns)
+                pie_plot = df[columns_to_plot].value_counts().plot.pie(autopct="%1.1f%%")
+                st.write(pie_plot)
+                st.pyplot()
+            all_column_names = df.columns.to_list()
+            types_of_plot = st.selectbox('Select Type of plot',['area', 'bar', 'line', 'hist', 'box', 'kde'])
+            selected_column_names = st.multiselect('Select Columns to plot', all_column_names)
+
+            if st.button('Generate Plot'):
+                st.success('Generating Customizable Plot of {} for {}'.format(types_of_plot, selected_column_names))
+
+                # Plot by Streamlit
+                if types_of_plot == 'area':
+                    cust_data = df[selected_column_names]
+                    st.area_chart(cust_data)
+                elif types_of_plot == 'bar':
+                    cust_data = df[selected_column_names]
+                    st.bar_chart(cust_data)
+                elif types_of_plot == 'line':
+                    cust_data = df[selected_column_names]
+                    st.line_chart(cust_data)
+                # custom plot
+                elif types_of_plot:
+                    cust_plot = df[selected_column_names].plot(kind=types_of_plot)
+                    st.write(cust_plot)
+                    st.pyplot()
+
+
+
+    elif choice == 'Model Building':
+        st.subheader('Building Machine Learning Model')
+        data = st.file_uploader('Upload Dataset(csv/txt)', type=['csv', 'txt'])
+        if data is not None:
+            df = pd.read_csv(data)
+            st.dataframe(df.head())
+
+            # Model Building
+            X = df.iloc[:,0:-1]
+            Y = df.iloc[:,-1]
+            seed = 7
+
+            # Model
+
+            models = []
+            models.append(("LR", LogisticRegression()))
+            models.append(("LDA", LinearDiscriminantAnalysis()))
+            models.append(("KNN", KNeighborsClassifier()))
+            models.append(("CART", DecisionTreeClassifier()))
+            models.append(("NB", GaussianNB()))
+            models.append(("SVM", SVC()))
+
+            model_names = []
+            model_mean = []
+            model_std = []
+            all_models = []
+            scoring = 'accuracy'
+
+            for name, model in models:
+                kfold = model_selection.KFold(n_splits=10, random_state=seed)
+                cv_results = model_selection.cross_val_score(model, X, Y, cv=kfold, scoring=scoring)
+                model_names.append(name)
+                model_mean.append(cv_results.mean())
+                model_std.append(cv_results.std())
+
+                accuracy_results = {"model_name":name, 'model_accuracy':cv_results.mean(), 'standard_deviation':cv_results.std()}
+                all_models.append(accuracy_results)
+            
+            if st.checkbox('Metrics as Table'):
+                st.dataframe(pd.DataFrame(zip(model_names,model_mean, model_std), columns = ['Model Name', 'Model Accuracy', 'Standard Deviation']))
+            if st.checkbox('Metrics as JSON'):
+                st.json(all_models)
+
+
+
+    elif choice == 'About':
+        st.subheader('About')
+        st.text('I am Nagaveda and this is my project.')
+        st.text(' I made this just to pracise my skills to build machine learning and data science tools!')
+
+
+
+if __name__ == '__main__':
+    main()
